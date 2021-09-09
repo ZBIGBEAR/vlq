@@ -4,17 +4,25 @@ import (
 	"flag"
 	"fmt"
 	"vlq/decode"
+	"vlq/encode"
 )
 
 
-var v = flag.String("v","a","input v")
+var v = flag.Bool("v",false,"input v")
 var input = flag.String("input","","please input nubmers")
 
 func main(){
 	flag.Parse()
-	fmt.Println("end:",*v)
+	var ret string
+	var err error
+	if *v {
+		// 解码
+		ret, err = decode.Decode(*input)
+	}else{
+		// 编码
+		ret, err = encode.Encode(*input)
+	}
 
-	ret, err := decode.Decode(*input)
 	if err != nil {
 		panic(err)
 	}

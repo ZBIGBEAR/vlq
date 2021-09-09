@@ -1,6 +1,8 @@
 package common
 
-import "strings"
+import (
+	"strings"
+)
 
 func Ten2Two(n int64) string {
 	tmp := n

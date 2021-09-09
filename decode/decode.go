@@ -3,66 +3,90 @@ package decode
 import (
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"vlq/common"
 )
 
 /*
-输入：一串字符串，逗号分割
-示例：23,43,6666,4,0
+输入：base64编码
+示例：AWESOMEITWORKS
 
-输出：base64编码
- */
+输出：一串数字，逗号分割
+示例：0,11,2,9,7,6,2,4,-9,11,7,-8,5,9
+
+验证：https://www.murzwin.com/base64vlq.html
+*/
 func Decode(input string) (string, error) {
-	// 1.检查格式是否正确
-	if !checkInput(input) {
-		return "", errors.New(fmt.Sprintf("format err:%s", input))
+	// 1.转换成数字
+	numbers, err := convert2Number(input)
+	if err != nil {
+		return "", err
 	}
 
-	// 2.转换成数字
-	numbers := convert2Number(input)
-
+	fmt.Println("%+V", numbers)
 	// 3.返回结果
-	ret := ""
+	temNumbers := make([]string,0)
 	for _, number := range numbers {
-		ret += number.Base64Binary
+		temNumbers = append(temNumbers, number.Str)
 	}
-	return ret, nil
+
+	return strings.Join(temNumbers, ","), nil
 }
 
-func checkInput(input string) bool {
-	inputs := strings.Split(input, common.Comma)
-	for _, in := range inputs {
-		if !common.CheckNumber(in) {
-			return false
+func convert2Number(input string) ([]*common.Number, error) {
+	numbers := make([]*common.Number,0)
+	tmpBinaries := make([]string,0)
+	numBase64 := ""
+	for i, in := range input {
+		find := false
+		numBase64 += string(in)
+		for j, base64 := range common.Base64 {
+			if base64 == string(in) {
+				find = true
+				binary := common.Ten2Two(int64(j))
+				binaryVlq := common.Supplement(binary, 6)
+				tmpBinaries = append(tmpBinaries, binaryVlq)
+				if binaryVlq[0] == '0' {
+					number := &common.Number{
+						Order:        i,
+						Positive:     false,
+						Str:          "",
+						Num:          0,
+						OriginBinary: "",
+						VLQBinary:    strings.Join(tmpBinaries,""),
+						Base64Binary: numBase64,
+					}
+					number.Positive, number.OriginBinary = convert2Binary(tmpBinaries)
+					number.Num = common.Two2Ten(number.OriginBinary)
+					if !number.Positive{
+						number.Num = -1*number.Num
+					}
+					number.Str = fmt.Sprintf("%d", number.Num)
+					numbers = append(numbers, number)
+					tmpBinaries = make([]string,0)
+					numBase64 = ""
+				}
+				break
+			}
+		}
+		if !find {
+			return nil, errors.New(fmt.Sprintf("input:%s,%s invalid", input,string(in)))
 		}
 	}
 
-	return true
+	return numbers, nil
 }
 
-func convert2Number(input string) ([]*common.Number){
-	inputs := strings.Split(input, common.Comma)
-	ret := make([]*common.Number,0,len(inputs))
-	for i, in := range inputs {
-		num,_ := strconv.ParseInt(in,10,64)
-		positive := true
-		if num<0{
-			positive=false
-		}
-		originBinary := common.Ten2Two(num)
-		vlqBinary := common.Binary2Vlq(positive, originBinary)
-		ret = append(ret, &common.Number{
-			Order:        i,
-			Positive: positive,
-			Str:          "in",
-			Num:          num,
-			OriginBinary: originBinary,
-			VLQBinary:    vlqBinary,
-			Base64Binary: common.Vlq2Base64(vlqBinary),
-		})
+func convert2Binary(binarys []string) (bool, string) {
+	positive := true
+	if binarys[0][5] == '1' {
+		positive = false
+	}
+	binary := ""
+	for i:=len(binarys)-1;i>=1;i--{
+		binary += binarys[i][1:6]
 	}
 
-	return ret
+	binary += binarys[0][1:5]
+	return positive, binary
 }

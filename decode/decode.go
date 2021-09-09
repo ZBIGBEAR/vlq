@@ -23,7 +23,6 @@ func Decode(input string) (string, error) {
 		return "", err
 	}
 
-	fmt.Println("%+V", numbers)
 	// 3.返回结果
 	temNumbers := make([]string,0)
 	for _, number := range numbers {
